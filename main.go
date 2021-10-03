@@ -37,7 +37,33 @@ func main() {
 		res.SendStatus(204)
 	})
 
+	r.Put("/api/articles/{articleId}", func(w http.ResponseWriter, r *http.Request) {
+		res, req := yin.Event(w, r)
+		articleId := chi.URLParam(r, "articleId")
+		body := map[string]string{}
+		req.BindBody(&body)
+		article := Article{
+			Title:    body["Title"],
+			Category: body["Category"],
+			Url:      body["Url"],
+		}
+		newArticleDb.Update(article, articleId)
+		res.SendStatus(204)
+	})
+
 	http.ListenAndServe(":3000", r)
+}
+
+func (articleDb *ArticleDb) Update(article Article, Id string) {
+	stmt, _ := articleDb.DB.Prepare(`
+	UPDATE Articles
+	SET Title=?, Category=?, Url=?
+	WHERE Id= ?;
+	`)
+	stmt.Exec(article.Title,
+		article.Category,
+		article.Url,
+		Id)
 }
 
 func (articleDb *ArticleDb) Add(article Article) {
