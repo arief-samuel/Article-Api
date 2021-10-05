@@ -51,6 +51,13 @@ func main() {
 		res.SendStatus(204)
 	})
 
+	r.Get("/api/articles/{articleId}", func(w http.ResponseWriter, r *http.Request) {
+		res, _ := yin.Event(w, r)
+		articleId := chi.URLParam(r, "articleId")
+		articles := newArticleDb.GetById(articleId)
+		res.SendJSON(articles)
+	})
+
 	http.ListenAndServe(":3000", r)
 }
 
@@ -69,8 +76,8 @@ func (articleDb *ArticleDb) Update(article Article, Id string) {
 func (articleDb *ArticleDb) Add(article Article) {
 	stmt, _ := articleDb.DB.Prepare(`
 	INSERT INTO Articles
-(Title, Category, Url, Created_At)
-VALUES(?, ?, ?, ?);
+	(Title, Category, Url, Created_At)
+	VALUES(?, ?, ?, ?);
 	`)
 	stmt.Exec(article.Title,
 		article.Category,
@@ -99,7 +106,30 @@ func (articleDb *ArticleDb) Get() []Article {
 		articles = append(articles, article)
 	}
 	return articles
+}
 
+func (articleDb *ArticleDb) GetById(articleId string) Article {
+	article := Article{}
+	rows, _ := articleDb.DB.Query(`
+	SELECT Id, Title, Category, Url, Created_At
+	FROM Articles
+	WHERE Id = ?;
+	`, articleId)
+	var id int
+	var title, category, url, created_At string
+
+	if rows.Next() {
+		rows.Scan(&id, &title, &category, &url, &created_At)
+		GetArticle := Article{
+			Id:         id,
+			Title:      title,
+			Category:   category,
+			Url:        url,
+			Created_At: created_At,
+		}
+		article = GetArticle
+	}
+	return article
 }
 
 func NewArticleDb(db *sql.DB) *ArticleDb {
